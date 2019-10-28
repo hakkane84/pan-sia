@@ -1,0 +1,31 @@
+{
+  "name": "pan-sia",
+  "version": "1.0.0",
+  "description": "Trans-network statistics generator for the Sia forks",
+  "main": "pan-sia.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hakkane84/pan-sia.git"
+  },
+  "keywords": [
+    "Sia",
+    "blockchain",
+    "decentralized"
+  ],
+  "author": "Salva Herrera (keops.cc)",
+  "license": "AGPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/hakkane84/pan-sia/issues"
+  },
+  "homepage": "https://github.com/hakkane84/pan-sia#readme",
+  "dependencies": {
+    "babel-runtime": "^6.26.0",
+    "cron": "^1.7.2",
+    "hyperspace.js": "^0.1.0",
+    "sia.js": "^0.4.2",
+    "siaprime.js": "0.0.5"
+  }
+}

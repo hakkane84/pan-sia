@@ -37,9 +37,9 @@ var daemons = [
 var daemonNum = 0
 
 // Other parameters
-var webpath = 'C:/keops_web/dbs/'
-var currentFilePath = webpath + "pansia_current"
-var evolutionFilePath = webpath + "pansia_evolution"
+var webpath = './'
+var currentFilePath = webpath + "pansia_current.json"
+var evolutionFilePath = webpath + "pansia_evolution.json"
 
 // Initial log lines
 console.log()
@@ -75,7 +75,14 @@ var cronJob = cron.job("00 0,30 * * * *", function(){
                     if (daemons[i].usedstorage > 0) {daemons[i].usedstorage = currentStats[i].usedstorage} else {daemons[i].usedstorage = 0}
                     if (daemons[i].totalstorage > 0) {daemons[i].totalstorage = currentStats[i].totalstorage} else {daemons[i].totalstorage = 0}
                     if (daemons[i].activehosts > 0) {daemons[i].activehosts = currentStats[i].activehosts} else {daemons[i].activehosts = 0}
-                    daemons[i].version = currentStats[i].version
+                    if (daemons[i].usedstorage_online > 0) {daemons[i].usedstorage_online = currentStats[i].usedstorage_online} else {daemons[i].usedstorage_online = 0}
+                    if (daemons[i].totalstorage_online > 0) {daemons[i].totalstorage_online = currentStats[i].totalstorage_online} else {daemons[i].totalstorage_online = 0}
+                    if (daemons[i].onlinehosts > 0) {daemons[i].onlinehosts = currentStats[i].onlinehosts} else {daemons[i].onlinehosts = 0}
+                    try {
+                        daemons[i].version = currentStats[i].version
+                    } catch(e) {
+                        daemons[i].version = 0
+                    }
                 } else {
                     daemons[i].height = 0
                     daemons[i].difficulty = 0
@@ -83,6 +90,9 @@ var cronJob = cron.job("00 0,30 * * * *", function(){
                     daemons[i].usedstorage = 0
                     daemons[i].totalstorage = 0
                     daemons[i].activehosts = 0
+                    daemons[i].usedstorage_online = 0
+                    daemons[i].totalstorage_online = 0
+                    daemons[i].onlinehosts = 0
                     daemons[i].version = 0
                 }
             }
@@ -98,6 +108,9 @@ var cronJob = cron.job("00 0,30 * * * *", function(){
                 daemons[i].usedstorage = 0
                 daemons[i].totalstorage = 0
                 daemons[i].activehosts = 0
+                daemons[i].usedstorage_online = 0
+                daemons[i].totalstorage_online = 0
+                daemons[i].onlinehosts = 0
                 daemons[i].version = 0
             }
             consensusCall(daemons, daemonNum)
@@ -127,7 +140,7 @@ var cronJob = cron.job("00 0,30 * * * *", function(){
 
 
     function hostsbCall(daemons, daemonNum) {
-        // Gets the data about the hosting network
+        // Gets the data about the hosting network: active hosts
 
         var wrapper = daemons[daemonNum].wrapper
         wrapper.connect(daemons[daemonNum].call)
@@ -164,6 +177,69 @@ var cronJob = cron.job("00 0,30 * * * *", function(){
                 daemons[daemonNum].totalstorage = totalStorage
                 daemons[daemonNum].activehosts = hostsCount
                 
+                hostsOnlineCall(daemons, daemonNum)
+
+            }).catch((err) => { // Errors of connection to daemon
+                console.log("**** Error retrieving hostdb from " + daemons[daemonNum].name)
+                hostsOnlineCall(daemons, daemonNum)
+            }) 
+        }).catch((err) => { // Errors of connection to daemon
+            console.log("**** Error connecting to " + daemons[daemonNum].name)
+            hostsOnlineCall(daemons, daemonNum)
+        })
+    }
+
+
+    function hostsOnlineCall(daemons, daemonNum) {
+        // Gets the data about the hosting network: all online hosts
+        var wrapper = daemons[daemonNum].wrapper
+        wrapper.connect(daemons[daemonNum].call)
+        .then((siad) => { 
+            siad.call('/hostdb/all').then((api) =>  {
+                var stringdb = JSON.stringify(api)
+                var a = stringdb.substr(0, stringdb.length-1) //This removes the last "}"
+                var b = a.slice(9, a.length) // Removes first characters
+                var hostdb = JSON.parse(b) // Parsing to an array
+                
+                console.log("All: " + hostdb.length)
+
+                // Filtering only the online
+                for (var i = 0; i < hostdb.length; i++) {
+                    if (hostdb[i].scanhistory != null) {
+                        if (hostdb[i].scanhistory[hostdb[i].scanhistory.length-1].success != true) {
+                            hostdb.splice(i, 1)
+                            i--
+                        }
+                    } else {
+                        hostdb.splice(i, 1)
+                        i--
+                    } 
+                }
+
+                var usedStorage = 0
+                var totalStorage = 0
+                var hostsCount = 0
+                for (var i = 0; i < hostdb.length; i++) {
+                    // Discerning between versions of hosts in Sia and SiaClassic
+                    if (daemons[daemonNum].name == "Sia" || daemons[daemonNum].name == "SiaClassic") {
+                        // We process this in a separate function
+                        var returnedArray = separateHostsVersion(daemons, daemonNum, hostdb, usedStorage, totalStorage, hostsCount, i)
+                        // Collecting back the data form the returned array
+                        usedStorage = returnedArray[0]
+                        totalStorage = returnedArray[1]
+                        hostsCount = returnedArray[2]
+
+                    } else {
+                        // Just add the hosts data to the count
+                        usedStorage = usedStorage + parseInt(hostdb[i].totalstorage) - parseInt(hostdb[i].remainingstorage)
+                        totalStorage = totalStorage + parseInt(hostdb[i].totalstorage)
+                        hostsCount++
+                    }
+                }
+
+                daemons[daemonNum].usedstorage_online = usedStorage
+                daemons[daemonNum].totalstorage_online = totalStorage
+                daemons[daemonNum].onlinehosts = hostsCount
                 versionCall(daemons, daemonNum)
 
             }).catch((err) => { // Errors of connection to daemon
@@ -175,6 +251,7 @@ var cronJob = cron.job("00 0,30 * * * *", function(){
             versionCall(daemons, daemonNum)
         })
     }
+
 
     function separateHostsVersion(daemons, daemonNum, api, usedStorage, totalStorage, hostsCount, i) {
         // Discerns if the host is in the Sia network or on the legacy network
@@ -276,7 +353,10 @@ var cronJob = cron.job("00 0,30 * * * *", function(){
                 hashrate: daemons[i].hashrate,
                 usedstorage: daemons[i].usedstorage,
                 totalstorage: daemons[i].totalstorage,
-                activehosts: daemons[i].activehosts
+                activehosts: daemons[i].activehosts,
+                usedstorage_online: daemons[i].usedstorage_online,
+                totalstorage_online: daemons[i].totalstorage_online,
+                onlinehosts: daemons[i].onlinehosts
             })
         }
 
@@ -336,18 +416,30 @@ var cronJob2 = cron.job("00 05 00 * * *", function(){
             siatotal: currentStats[0].totalstorage,
             siahosts: currentStats[0].activehosts,
             siahash: currentStats[0].hashrate,
+            siaused_online: currentStats[0].usedstorage_online,
+            siatotal_online: currentStats[0].totalstorage_online,
+            siahosts_online: currentStats[0].onlinehosts,
             hsused: currentStats[1].usedstorage,
             hstotal: currentStats[1].totalstorage,
             hshosts: currentStats[1].activehosts,
             hshash: currentStats[1].hashrate,
+            hsused_online: currentStats[1].usedstorage_online,
+            hstotal_online: currentStats[1].totalstorage_online,
+            hshosts_online: currentStats[1].onlinehosts,
             primeused: currentStats[2].usedstorage,
             primetotal: currentStats[2].totalstorage,
             primehosts: currentStats[2].activehosts,
             primehash: currentStats[2].hashrate,
+            primeused_online: currentStats[2].usedstorage_online,
+            primetotal_online: currentStats[2].totalstorage_online,
+            primehosts_online: currentStats[2].onlinehosts,
             classicused: currentStats[3].usedstorage,
             classictotal: currentStats[3].totalstorage,
             classichosts: currentStats[3].activehosts,
-            classichash: currentStats[3].hashrate
+            classichash: currentStats[3].hashrate,
+            classicused_online: currentStats[3].usedstorage_online,
+            classictotal_online: currentStats[3].totalstorage_online,
+            classichosts_online: currentStats[3].onlinehosts,
         }
         evoArray.push(evoEntry)
 
