@@ -201,6 +201,10 @@ var cronJob = cron.job("00 0,30 * * * *", function(){
                 var b = a.slice(9, a.length) // Removes first characters
                 var hostdb = JSON.parse(b) // Parsing to an array
                 
+                if (hostdb == null) {
+                    hostdb = [] // Avoids possible errors
+                }
+                
                 console.log("All: " + hostdb.length)
 
                 // Filtering only the online
