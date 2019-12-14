@@ -150,6 +150,9 @@ var cronJob = cron.job("00 0,30 * * * *", function(){
                 var a = stringdb.substr(0, stringdb.length-1) //This removes the last "}"
                 var b = a.slice(9, a.length) // Removes first characters
                 var api = JSON.parse(b) // Parsing to an array
+                if (api == null) {
+                    api = [] // Avoids possible errors
+                }
 
                 var usedStorage = 0
                 var totalStorage = 0
