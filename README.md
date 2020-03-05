@@ -15,3 +15,7 @@ Pan-Sia is an script that collects key stats of multiple Sia forked clients. It 
 * Configure the array `daemons` with each daemon to be scored
 * Set the output path for the generated API files (variable `webpath`)
 * Run with the command `node pan-sia.js`
+
+## Ignored hosts
+
+Hosts proven to be cheating in their metrics can be added to the `ignored_hosts.json` file to be ignored for the aggregated metrics of a network
