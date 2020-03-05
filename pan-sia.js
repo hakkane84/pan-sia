@@ -10,6 +10,9 @@ var hs = require('./node_modules/hyperspace.js');
 var siaprime = require('./node_modules/siaprime.js');
 var siaclassic = sia
 
+// Ignored hosts loading
+var ignoredHosts = JSON.parse(fs.readFileSync('ignored_hosts.json', 'utf8'))
+
 // Array of clients to watch. You need to configure the ports to your setup
 var daemons = [
     {
@@ -137,7 +140,19 @@ var cronJob = cron.job("00 0,30 * * * *", function(){
             hostsbCall(daemons, daemonNum)
         }) 
     }
-
+    
+    
+    function checkIgnoredHosts(host) {
+        // Detects if a host is in the list of hosts to ignore
+        var isIgnored = false // Default
+        for (var i = 0; i < ignoredHosts.length; i++) {
+            if (host.publickeystring == ignoredHosts[i].pubkey) {
+                isIgnored = true
+            }
+        }
+        return isIgnored
+    }
+    
 
     function hostsbCall(daemons, daemonNum) {
         // Gets the data about the hosting network: active hosts
@@ -158,21 +173,26 @@ var cronJob = cron.job("00 0,30 * * * *", function(){
                 var totalStorage = 0
                 var hostsCount = 0
                 for (var i = 0; i < api.length; i++) {
+                    
+                    // Check if the host is in the ignoring list, where we place cheating hosts
+                    var isIgnored = checkIgnoredHosts(api[i])
 
-                    // Discerning between versions of hosts in Sia and SiaClassic
-                    if (daemons[daemonNum].name == "Sia" || daemons[daemonNum].name == "SiaClassic") {
-                        // We process this in a separate function
-                        var returnedArray = separateHostsVersion(daemons, daemonNum, api, usedStorage, totalStorage, hostsCount, i)
-                        // Collecting back the data form the returned array
-                        usedStorage = returnedArray[0]
-                        totalStorage = returnedArray[1]
-                        hostsCount = returnedArray[2]
+                    if (isIgnored == false) {
+                        // Discerning between versions of hosts in Sia and SiaClassic
+                        if (daemons[daemonNum].name == "Sia" || daemons[daemonNum].name == "SiaClassic") {
+                            // We process this in a separate function
+                            var returnedArray = separateHostsVersion(daemons, daemonNum, api, usedStorage, totalStorage, hostsCount, i)
+                            // Collecting back the data form the returned array
+                            usedStorage = returnedArray[0]
+                            totalStorage = returnedArray[1]
+                            hostsCount = returnedArray[2]
 
-                    } else {
-                        // Just add the hosts data to the count
-                        usedStorage = usedStorage + parseInt(api[i].totalstorage) - parseInt(api[i].remainingstorage)
-                        totalStorage = totalStorage + parseInt(api[i].totalstorage)
-                        hostsCount++
+                        } else {
+                            // Just add the hosts data to the count
+                            usedStorage = usedStorage + parseInt(api[i].totalstorage) - parseInt(api[i].remainingstorage)
+                            totalStorage = totalStorage + parseInt(api[i].totalstorage)
+                            hostsCount++
+                        }
                     }
                 }
 
@@ -227,20 +247,26 @@ var cronJob = cron.job("00 0,30 * * * *", function(){
                 var totalStorage = 0
                 var hostsCount = 0
                 for (var i = 0; i < hostdb.length; i++) {
-                    // Discerning between versions of hosts in Sia and SiaClassic
-                    if (daemons[daemonNum].name == "Sia" || daemons[daemonNum].name == "SiaClassic") {
-                        // We process this in a separate function
-                        var returnedArray = separateHostsVersion(daemons, daemonNum, hostdb, usedStorage, totalStorage, hostsCount, i)
-                        // Collecting back the data form the returned array
-                        usedStorage = returnedArray[0]
-                        totalStorage = returnedArray[1]
-                        hostsCount = returnedArray[2]
+                    
+                    // Check if the host is in the ignoring list, where we place cheating hosts
+                    var isIgnored = checkIgnoredHosts(api[i])
 
-                    } else {
-                        // Just add the hosts data to the count
-                        usedStorage = usedStorage + parseInt(hostdb[i].totalstorage) - parseInt(hostdb[i].remainingstorage)
-                        totalStorage = totalStorage + parseInt(hostdb[i].totalstorage)
-                        hostsCount++
+                    if (isIgnored == false) {
+                        // Discerning between versions of hosts in Sia and SiaClassic
+                        if (daemons[daemonNum].name == "Sia" || daemons[daemonNum].name == "SiaClassic") {
+                            // We process this in a separate function
+                            var returnedArray = separateHostsVersion(daemons, daemonNum, hostdb, usedStorage, totalStorage, hostsCount, i)
+                            // Collecting back the data form the returned array
+                            usedStorage = returnedArray[0]
+                            totalStorage = returnedArray[1]
+                            hostsCount = returnedArray[2]
+
+                        } else {
+                            // Just add the hosts data to the count
+                            usedStorage = usedStorage + parseInt(hostdb[i].totalstorage) - parseInt(hostdb[i].remainingstorage)
+                            totalStorage = totalStorage + parseInt(hostdb[i].totalstorage)
+                            hostsCount++
+                        }
                     }
                 }
 
