@@ -1,0 +1,7 @@
+[
+    {
+        "network": "sia",
+        "pubkey": "ed25519:efc7c8b86b517c8e792641c68f4a05894720d7e78b25a12ff200fe0719c31dc1",
+        "reason": "Cheating on total storage. Data can't be retrieved, as detected by SiaStats Hosts Monitor benchmarks, together with an unlikely 10000x jump in storage capacity (11PB)"
+    }
+]
